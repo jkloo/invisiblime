@@ -4,6 +4,9 @@ import re
 import sublime
 import sublime_plugin
 
+def is_gitignore(fname):
+    return os.path.basename(fname) == '.gitignore'
+
 
 def find_gitignore(path, proj_root):
     p = os.path.join(proj_root, path, '.gitignore')
@@ -33,37 +36,37 @@ def get_entries(fname):
     return file_patterns, dir_patterns
 
 
-class UpdateIgnores(sublime_plugin.TextCommand):
-    def get_project_settings(self):
-        return self.view.window().project_data()
+def overwrite_ignores(data, proj_root):
+    for folder in data.get('folders', []):
+        ignore = find_gitignore(folder.get('path', ''), proj_root)
+        if ignore:
+            files, dirs = get_entries(ignore)
+            idx = data['folders'].index(folder)
+            data['folders'][idx]['file_exclude_patterns'] = files
+            data['folders'][idx]['folder_exclude_patterns'] = dirs
+    return data
 
-    def get_git_ignores(self):
-        folders = self.get_project_settings().get('folders', [])
+
+class UpdateIgnores(sublime_plugin.TextCommand):
+    def get_project_data(self):
+        return self.view.window().project_data()
 
     def run(self, edit, **kwargs):
         print(os.path.basename(self.view.file_name()))
 
     def is_enabled(self, *args):
-        return os.path.basename(self.view.file_name()) == '.gitignore'
+        return is_gitignore(self.view.file_name())
 
 
 class OverWriteIgnores(UpdateIgnores):
     def run(self, edit, **kwargs):
         proj_root = os.path.dirname(self.view.window().project_file_name())
-        settings = self.get_project_settings()
-        for folder in settings.get('folders', []):
-            ignore = find_gitignore(folder.get('path', ''), proj_root)
-            if ignore:
-                files, dirs = get_entries(ignore)
-                idx = settings['folders'].index(folder)
-                settings['folders'][idx]['file_exclude_patterns'] = files
-                settings['folders'][idx]['folder_exclude_patterns'] = dirs
-
-        self.view.window().set_project_data(settings)
+        data = self.get_project_data()
+        self.view.window().set_project_data(overwrite_ignores(data, proj_root))
 
 
 class GitIgnoreListener(sublime_plugin.EventListener):
     def on_post_save(self, view):
-        if os.path.basename(view.file_name()) == '.gitignore':
-            if sublime.ok_cancel_dialog('Update your sublime project settings?'):
+        if is_gitignore(view.file_name()):
+            if sublime.ok_cancel_dialog('Update your sublime project data?'):
                 view.run_command('over_write_ignores')
