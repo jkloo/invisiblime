@@ -1,0 +1,12 @@
+language: python
+python:
+  - "3.3"
+install: 
+  - "make .depends"
+  - "pip install coveralls"
+
+script:
+  - "make test"
+
+after_success:
+    coveralls
