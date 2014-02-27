@@ -1,21 +1,22 @@
 import os
-from unittest.mock import Mock
+from unittest.mock import MagicMock
 
 try:
     import sublime
 except ImportError:
-    sublime = Mock()
+    sublime = MagicMock()
 
 try:
     import sublime_plugin
 except ImportError:
-    sublime_plugin = Mock()
+    sublime_plugin = MagicMock()
 
 
 from .utils import is_gitignore, find_gitignore, clean_comments, get_entries, overwrite_ignores
 
 
 class UpdateIgnores(sublime_plugin.TextCommand):
+
     def get_project_data(self):
         return self.view.window().project_data()
 
@@ -26,7 +27,7 @@ class UpdateIgnores(sublime_plugin.TextCommand):
         return is_gitignore(self.view.file_name())
 
 
-class OverWriteIgnores(UpdateIgnores):
+class OverwriteIgnores(UpdateIgnores):
     def run(self, edit, **kwargs):
         proj_root = os.path.dirname(self.view.window().project_file_name())
         data = self.get_project_data()
@@ -34,7 +35,21 @@ class OverWriteIgnores(UpdateIgnores):
 
 
 class GitIgnoreListener(sublime_plugin.EventListener):
+    strat_descriptions = [['overwrite', 'Overwrite my currently ignored files and directories.'],
+                          ['none', 'Don\'t try to help me; I don\'t need you.']]
+    strategies = {'overwrite': 'overwrite_ignores'}
+
+    def call(self, index):
+        item = self.strat_descriptions[index][0]
+        self.view.run_command(self.strategies.get(item, ''))
+
     def on_post_save(self, view):
         if is_gitignore(view.file_name()):
-            if sublime.ok_cancel_dialog('Update your sublime project data?'):
-                view.run_command('over_write_ignores')
+            self.view = view
+            settings = sublime.load_settings('Invisiblime.sublime-settings')
+            strat = settings.get('strategy', '')
+            flattened = [x[0] for x in self.strat_descriptions]
+            if strat in flattened:
+                self.call(flattened.index(strat))
+            else:
+                view.window().show_quick_panel(self.strat_descriptions, self.call)

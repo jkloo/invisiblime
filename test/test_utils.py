@@ -8,11 +8,6 @@ from ..utils import is_gitignore, find_gitignore, clean_comments, get_entries, o
 
 
 class TestIsGitignore(unittest.TestCase):
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
 
     def test__is_gitignore__simple(self):
         self.assertTrue(is_gitignore('.gitignore'))
@@ -28,11 +23,6 @@ class TestIsGitignore(unittest.TestCase):
 
 
 class TestFindGitignore(unittest.TestCase):
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
 
     @patch('os.path.isfile', Mock(return_value=True))
     def test__find_gitignore__relative_path__isfile_true(self):
@@ -60,6 +50,7 @@ class TestFindGitignore(unittest.TestCase):
 
 
 class TestCleanComments(unittest.TestCase):
+
     def test__clean_comments(self):
         test_string = 'thing1\nthing2\n# a comment\nthing3 # inline comment'
         expected = 'thing1\nthing2\nthing3'
@@ -67,6 +58,7 @@ class TestCleanComments(unittest.TestCase):
 
 
 class TestGetEntries(unittest.TestCase):
+
     def test__get_entries__(self):
         data = 'dir1\ndir2/\n\n.file1\n*.file2\nfile3.*\n*.dir3/'
         files = ['.file1', '*.file2', 'file3.*']
